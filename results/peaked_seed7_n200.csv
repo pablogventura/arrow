@@ -1,0 +1,14 @@
+group,method,condorcet_eff,mean_regret,iia_rate,majority_top
+ranking,plurality,0.28,3.637541405570387,0,0.28
+ranking,borda,0.91,0.0629124872409214,0.185,0.91
+ranking,minimax,1,0.27315320138133087,0.01,1
+ranking,copeland,1,0.27315320138133087,0.005,1
+ranking,rankedPairs,1,0.27315320138133087,0,1
+ranking,irv,0.48,2.563336716316489,0,0.48
+ranking,approvalRanking,0.825,0.01539595998054086,0.16,0.825
+ranking,scoreRanking,0.91,0.0629124872409214,0.185,0.91
+escape,approvalUtil,0.84,0.04117142318244082,,0.84
+escape,scoreUtil,0.855,0,,0.855
+escape,majorityJudgment,0.78,0.9987202166603515,,0.78
+escape,star,1,0.27315320138133087,,1
+meta,condorcet_existence,1,model=peaked,n=200,v=25

@@ -19,6 +19,9 @@
 
 ## Métodos y simulaciones
 
-- Tideman, N. Trabajos sobre métodos Condorcet y independencia.
+- Tideman, N. Trabajos sobre métodos Condorcet y ranked pairs.
 - Laslier, J.-F. Literature sobre approval voting.
-- Brandt, F., Conitzer, V., Endriss, U., Lang, J., & Procaccia, A. (eds.). *Handbook of Computational Social Choice*. Cambridge University Press.
+- Balinski, M., & Laraki, R. Majority judgment.
+- Black, D. The theory of committees and elections (votante mediano / single-peaked).
+- Gibbard, A. (1973); Satterthwaite, M. (1975). Manipulabilidad.
+- Brandt, F., Conitzer, V., Endriss, U., Lang, J., & Procaccia, A. (eds.). *Handbook of Computational Social Choice*.

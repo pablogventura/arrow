@@ -17,22 +17,24 @@
       <p class="brand">Arrow</p>
       <p class="tagline">
         El spoiler electoral no es un fallo aislado: es el precio de pedirle
-        demasiadas virtudes a un mismo sistema de rankings. Probalo.
+        demasiadas virtudes a un mismo sistema de rankings. Probalo - y explorá
+        las salidas del teorema.
       </p>
       <nav class="nav">
-        <a href="#manual">Probar el ciclo</a>
-        <a href="articulo.html">Leer la nota</a>
-        <a href="articulo.pdf">PDF</a>
+        <a href="#manual">Canónico</a>
+        <a href="#median">Mediano</a>
         <a href="#monte">Monte Carlo</a>
+        <a href="articulo.html">Nota</a>
+        <a href="articulo.pdf">PDF</a>
       </nav>
     </header>
 
     <main>
       <section class="panel" id="manual">
-        <h2>Escenario manual</h2>
+        <h2>Rankings (marco Arrow)</h2>
         <p class="lede">
-          Cargá el ciclo canónico (cinco votantes, tres candidatos) o editá
-          rankings. Abajo: por qué cada método responde distinto.
+          Ciclo canónico o perfiles al azar. Tabla separada: métodos de ranking
+          vs escapes de boleta (cuando hay utilidades).
         </p>
         <div class="controls">
           <label class="field"
@@ -40,31 +42,61 @@
             <input id="nVotersManual" type="number" min="2" max="12" value="5" />
           </label>
           <button type="button" id="btnCanonical">Canónico</button>
-          <button type="button" class="secondary" id="btnRandomIc">Azar IC</button>
-          <button type="button" class="secondary" id="btnRandomSpatial">Azar espacial</button>
-          <button type="button" class="secondary" id="btnUtils">Utilidades (escape)</button>
+          <button type="button" class="secondary" id="btnRandomIc">IC</button>
+          <button type="button" class="secondary" id="btnRandomSpatial">Espacial 1D</button>
+          <button type="button" class="secondary" id="btnRandomPeaked">Single-peaked</button>
+          <button type="button" class="secondary" id="btnUtils">Utilidades</button>
           <button type="button" id="btnManual">Calcular</button>
         </div>
         <div id="manualEditors"></div>
         <div id="utilsPanel" class="utils-panel" hidden></div>
-        <div id="results"></div>
+        <div class="split-results">
+          <div>
+            <h3 class="subhead">Rankings</h3>
+            <div id="resultsRanking"></div>
+          </div>
+          <div>
+            <h3 class="subhead">Escapes (boleta / utilidades)</h3>
+            <div id="resultsEscape"></div>
+          </div>
+        </div>
         <div id="canonicalExplain" class="explain"></div>
         <p class="note" id="scenarioNote"></p>
       </section>
 
-      <section class="panel" id="monte">
-        <h2>Monte Carlo</h2>
+      <section class="panel" id="median">
+        <h2>Votante mediano (single-peaked)</h2>
         <p class="lede">
-          Proxies honestos de "que tan bien refleja al grupo"
-          <span class="tip" title="Cuando existe alguien que gana todos los mano a mano, cuántas veces lo elige el método.">eficiencia Condorcet</span>,
-          <span class="tip" title="En el modelo espacial, cuánto se pierde frente a maximizar la suma de utilidades.">regret</span>,
-          <span class="tip" title="Qué tan seguido cambia el ganador al meter un candidato spoiler.">estrés tipo IIA</span>.
-          No hay voluntad objetiva única: son mediciones, no veredictos.
+          Con preferencias single-peaked en un eje, el candidato más cercano a la
+          mediana de los votantes es ganador de Condorcet (Black). Escape por
+          <em>dominio restringido</em>, no por cambiar la boleta.
+        </p>
+        <div class="controls">
+          <label class="field"
+            >Votantes
+            <input id="nMedian" type="number" min="5" max="99" value="21" />
+          </label>
+          <label class="field"
+            >Semilla
+            <input id="seedMedian" type="number" value="3" />
+          </label>
+          <button type="button" id="btnMedian">Simular eje</button>
+        </div>
+        <canvas id="medianCanvas" width="640" height="160"></canvas>
+        <div id="medianOut" class="explain"></div>
+      </section>
+
+      <section class="panel" id="monte">
+        <h2>Monte Carlo (rankings + escapes)</h2>
+        <p class="lede">
+          Compará modelos de preferencias. En single-peaked la tasa de Condorcet
+          winner dispara; en IC cae. Los escapes de boleta se evalúan con
+          utilidades (en IC, utilidades sintéticas desde el ranking).
         </p>
         <div class="controls">
           <label class="field"
             >Corridas
-            <input id="nRuns" type="number" min="50" max="2000" value="300" />
+            <input id="nRuns" type="number" min="50" max="2000" value="200" />
           </label>
           <label class="field"
             >Votantes
@@ -73,8 +105,12 @@
           <label class="field"
             >Modelo
             <select id="model">
-              <option value="spatial">Espacial 1D</option>
+              <option value="spatial1d">Espacial 1D</option>
+              <option value="peaked">Single-peaked</option>
+              <option value="peakedNoisy">Peaked + ruido</option>
+              <option value="spatial2d">Espacial 2D</option>
               <option value="ic">Impartial culture</option>
+              <option value="mallows">Mallows</option>
             </select>
           </label>
           <label class="field"
@@ -84,19 +120,23 @@
           <button type="button" id="btnMonte">Simular</button>
           <button type="button" class="secondary" id="btnCsv">CSV</button>
         </div>
-        <table id="monteTable"></table>
+        <p class="note" id="metaNote"></p>
+        <h3 class="subhead">Rankings</h3>
+        <table id="monteTableRank"></table>
+        <h3 class="subhead">Escapes</h3>
+        <table id="monteTableEscape"></table>
         <div class="charts">
           <figure>
-            <figcaption>Eficiencia Condorcet</figcaption>
-            <canvas id="chartCondorcet" width="320" height="180"></canvas>
+            <figcaption>Eficiencia Condorcet (rankings)</figcaption>
+            <canvas id="chartCondorcet" width="360" height="180"></canvas>
           </figure>
           <figure>
-            <figcaption>Tasa de cambio tipo IIA</figcaption>
-            <canvas id="chartIia" width="320" height="180"></canvas>
+            <figcaption>Regret (escapes)</figcaption>
+            <canvas id="chartRegret" width="360" height="180"></canvas>
           </figure>
           <figure>
-            <figcaption>Regret utilitario medio</figcaption>
-            <canvas id="chartRegret" width="320" height="180"></canvas>
+            <figcaption>Tasa IIA-stress (rankings)</figcaption>
+            <canvas id="chartIia" width="360" height="180"></canvas>
           </figure>
         </div>
         <p class="note" id="monteNote"></p>

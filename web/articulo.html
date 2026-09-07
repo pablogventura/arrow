@@ -370,19 +370,242 @@ verificado de lo narrado.</p>
 <p>Código: <a
 href="https://github.com/pablogventura/arrow">github.com/pablogventura/arrow</a>.
 Compilar: <code>cd lean &amp;&amp; lake build</code>.</p>
+<h2 id="salidas-del-marco-de-arrow-borrador-maximal">Salidas del marco
+de Arrow (borrador maximal)</h2>
+<p>Arrow no es una maldición cósmica sobre cualquier agregación. Es un
+teorema sobre un <strong>marco</strong>. Si cambiás el marco, el teorema
+deja de aplicarse (o se aplica a otra cosa). Acá van las familias
+principales. El sitio las separa en dos columnas:
+<strong>Rankings</strong> vs <strong>Escapes</strong>. Esta sección es
+deliberadamente larga: después se poda.</p>
+<h3 id="familia-1.-cambiar-la-boleta-salir-del-input-ranking">Familia 1.
+Cambiar la boleta (salir del input ranking)</h3>
+<p>Arrow asume que cada persona entrega un <strong>orden</strong>. Si la
+boleta pide otra cosa, ya no estás en el mismo juego.</p>
+<p><strong>Approval.</strong> Cada quien aprueba un subconjunto. En la
+simulación: umbral sobre utilidades (aprobar a quienes superan la media
+personal) o top-k del ranking. Gana quien más aprobaciones junta. Escape
+real cuando las aprobaciones no se reducen a un ranking rígido.</p>
+<p><strong>Score / range.</strong> Cada quien asigna un número (acá,
+utilidades en [0,1]). Gana quien maximiza la suma. Es el escape más
+directo hacia el utilitarismo. En el sitio, <strong>Score
+(utilidades)</strong> no es lo mismo que <strong>Score (desde
+ranking)</strong>: el segundo es Borda disfrazado y <strong>no</strong>
+escapa de Arrow.</p>
+<p><strong>Majority judgment.</strong> Cada quien califica con una
+escala ordinal (rechazar / insuficiente / aceptable / bien / excelente).
+El ganador se decide por la <strong>mediana</strong> de calificaciones,
+con desempate estilo “usual procedure” (proporción por encima vs por
+debajo de la mediana). La boleta es de juicios, no de rankings
+estrictos.</p>
+<p><strong>STAR.</strong> Primero se suman puntajes; después hay un
+runoff automático entre los dos mejores. Híbrido numérico. En nuestras
+corridas espaciales suele pegar cerca de Condorcet.</p>
+<p>Costos típicos de esta familia: hay que interpretar la escala; la
+gente puede hinchar o comprimir notas (estrategia); comparar “excelente”
+entre personas distintas es filosóficamente delicado. Arrow no los
+condena: <strong>tampoco los absuelve</strong> de otros problemas.</p>
+<h3
+id="familia-2.-restringir-el-dominio-single-peaked-posibilidad">Familia
+2. Restringir el dominio (single-peaked / posibilidad)</h3>
+<p>Arrow asume <strong>dominio universal</strong>: cualquier perfil de
+rankings es posible. Si el mundo real (o el modelo) solo admite perfiles
+<strong>single-peaked</strong> sobre un eje - cada persona tiene un pico
+y las opciones empeoran al alejarse - aparecen teoremas de
+<strong>posibilidad</strong>. El resultado clásico de Black: el
+candidato preferido por el <strong>votante mediano</strong> es ganador
+de Condorcet.</p>
+<p>En el sitio:</p>
+<ul>
+<li>Modelo <strong>Single-peaked</strong> / espacial 1D.</li>
+<li>Panel <strong>Votante mediano</strong>: dibuja el eje, la mediana y
+compara mediana vs Condorcet vs score vs pluralidad.</li>
+<li>Contraste Monte Carlo IC vs peaked (200 corridas, 25 votantes,
+semilla 7):</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Métrica</th>
+<th style="text-align: right;">Impartial culture</th>
+<th style="text-align: right;">Single-peaked</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Existencia de Condorcet winner</td>
+<td style="text-align: right;">92%</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>Eff. Condorcet (pluralidad)</td>
+<td style="text-align: right;">77%</td>
+<td style="text-align: right;">28%</td>
+</tr>
+<tr>
+<td>Eff. Condorcet (minimax)</td>
+<td style="text-align: right;">100%</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>Regret score (utilidades)</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>Regret majority judgment</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">~1.00</td>
+</tr>
+</tbody>
+</table>
+<p>Lectura: en single-peaked casi siempre hay Condorcet; pluralidad
+igual puede fallarlo (elige extremos con más “primeros”). Score
+utilitario, por construcción, minimiza regret en estas sims. Majority
+judgment no optimiza la suma: puede acumular regret aunque el dominio
+sea “bonito”.</p>
+<p>Si agregamos ruido (intercambiar adyacentes en el ranking), la
+existencia de Condorcet baja un poco (~95.5% en
+<code>peakedNoisy</code>). El escape por dominio es robusto solo
+mientras el mundo se parezca al eje.</p>
+<h3 id="familia-3.-seguir-en-rankings-pero-soltar-iia">Familia 3. Seguir
+en rankings pero soltar IIA</h3>
+<p>Acá no salís del input ranking. Soltás un axioma. Pluralidad, Borda,
+IRV, minimax, Copeland, <strong>ranked pairs</strong> (Tideman: cerrar
+victorias pairwise fuertes sin crear ciclos) viven acá.</p>
+<p>No es un “escape” en el sentido estricto: seguís en el lenguaje de
+Arrow, pero aceptás que el entorno de candidatos puede cambiar el
+veredicto entre dos. A cambio podés ganar eficiencia Condorcet y, a
+veces, menor regret.</p>
+<p>En espacial 1D / peaked (misma corrida):</p>
+<table>
+<thead>
+<tr>
+<th>Método</th>
+<th style="text-align: right;">Eff. Condorcet</th>
+<th style="text-align: right;">Regret medio</th>
+<th style="text-align: right;">IIA-stress</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pluralidad</td>
+<td style="text-align: right;">28%</td>
+<td style="text-align: right;">3.64</td>
+<td style="text-align: right;">0%</td>
+</tr>
+<tr>
+<td>Borda</td>
+<td style="text-align: right;">91%</td>
+<td style="text-align: right;">0.06</td>
+<td style="text-align: right;">18.5%</td>
+</tr>
+<tr>
+<td>Minimax</td>
+<td style="text-align: right;">100%</td>
+<td style="text-align: right;">0.27</td>
+<td style="text-align: right;">1%</td>
+</tr>
+<tr>
+<td>Copeland</td>
+<td style="text-align: right;">100%</td>
+<td style="text-align: right;">0.27</td>
+<td style="text-align: right;">0.5%</td>
+</tr>
+<tr>
+<td>Ranked pairs</td>
+<td style="text-align: right;">100%</td>
+<td style="text-align: right;">0.27</td>
+<td style="text-align: right;">0%</td>
+</tr>
+<tr>
+<td>IRV</td>
+<td style="text-align: right;">48%</td>
+<td style="text-align: right;">2.56</td>
+<td style="text-align: right;">0%</td>
+</tr>
+</tbody>
+</table>
+<p>Minimax / Copeland / ranked pairs clavan Condorcet cuando existe.
+Borda se acerca y paga más IIA-stress. Pluralidad e IRV pierden
+Condorcet y acumulan regret.</p>
+<h3
+id="familia-4.-solo-elegir-ganador-bajar-la-exigencia-de-salida">Familia
+4. Solo elegir ganador (bajar la exigencia de salida)</h3>
+<p>Arrow pide un <strong>ranking social completo</strong>. Si solo
+necesitás un ganador (<strong>social choice function</strong>), la forma
+exacta del teorema cambia. Eso no significa “todo vale”: aparece el
+teorema de <strong>Gibbard-Satterthwaite</strong>. En una versión
+informal: con al menos tres alternativas, cualquier regla que siempre
+elija un único ganador, sea “onto” en un sentido razonable y no
+dictatorial, será manipulable por alguien que miente en su boleta.</p>
+<p>Moraleja para el diseño: escapar de Arrow por el lado del ganador
+único te empuja a hablar de <strong>estrategia</strong>. Es otro
+capítulo; acá solo queda la señal de tránsito.</p>
+<h3 id="familia-5.-bordes-candidatos-a-poda">Familia 5. Bordes
+(candidatos a poda)</h3>
+<p><strong>Dictadura aleatoria / lotería sobre rankings.</strong> Elegir
+un votante al azar y copiar su ranking cumple unanimidad e IIA en
+expectativa y evita un dictador fijo; introduce azar. Útil como
+contrapunto teórico, raro como propuesta institucional seria.</p>
+<p><strong>Agenda / orden de votaciones pairwise.</strong> Si votás A vs
+B y el ganador contra C, el orden de la agenda puede decidir el
+resultado cuando hay ciclo. El “escape” es ilusorio: controlás el
+resultado con el procedimiento, no con una agregación canónica.</p>
+<p>Estas dos quedan documentadas para no olvidarlas; en una versión
+corta de la nota se pueden cortar enteras.</p>
+<h3 id="qué-no-hace-esta-sección">Qué no hace esta sección</h3>
+<p>No elige el método correcto. No formaliza GS ni el teorema de
+posibilidad single-peaked en Lean. No simula mentiras estratégicas. El
+valor es el mapa: <strong>cada escape corta una hipótesis
+distinta</strong>.</p>
+<h2 id="una-prueba-que-se-puede-chequear-con-matices-1">Una prueba que
+se puede chequear (con matices)</h2>
+<p>Además del texto y las simulaciones, el proyecto formaliza partes del
+argumento en Lean 4, un asistente de pruebas. La máquina no se
+impresiona con la prosa: o el paso está justificado, o no.</p>
+<p>Qué está chequeado hoy:</p>
+<ul>
+<li>Definiciones: candidatos, los seis rankings sobre tres alternativas,
+perfiles, SWF, axiomas.</li>
+<li>La dictadura cumple unanimidad e IIA.</li>
+<li>Una regla concreta “con spoiler” viola IIA (contraejemplo
+mecánico).</li>
+<li>El perfil canónico del ciclo (márgenes pairwise) coincide con el
+demo.</li>
+<li>Lemas de <strong>contagión</strong>: si un votante decide el par
+<code>(A,B)</code> en el desacuerdo canónico, también decide
+<code>(A,C)</code>.</li>
+</ul>
+<p>Qué queda como residual documentado:</p>
+<ul>
+<li>El paso final del argumento de Yu (el pivote se vuelve dictador
+pleno) y el caso general con muchos votantes. Está enunciado en Lean
+como axioma nombrado, con referencia, sin fingir que la mecanización
+está cerrada.</li>
+</ul>
+<p>Esa honestidad importa. La divulgación a veces vende “demostramos
+todo en la computadora” cuando en realidad hay un <code>sorry</code>
+escondido. Acá el residual se declara. El valor del puente Lean no es la
+victoria total: es obligar a no mezclar definiciones, y a separar lo
+verificado de lo narrado.</p>
+<p>Código: <a
+href="https://github.com/pablogventura/arrow">github.com/pablogventura/arrow</a>.
+Compilar: <code>cd lean &amp;&amp; lake build</code>.</p>
 <h2 id="entonces-qué-hacemos-con-esto">Entonces, ¿qué hacemos con
 esto?</h2>
-<p>Tres actitudes posibles, todas legítimas si se declaran:</p>
+<p>Cinco actitudes posibles, todas legítimas si se declaran:</p>
 <ol type="1">
-<li><strong>Relajar IIA.</strong> Aceptar que el entorno de candidatos
-importa. Diseñar métodos que usen más información (Borda, Condorcet) y
-explicar los costos.</li>
-<li><strong>Cambiar la boleta.</strong> Approval y score preguntan otra
-cosa. Arrow no las condena igual porque no viven en su marco.</li>
-<li><strong>Bajar la exigencia de salida.</strong> A veces alcanza un
-ganador, no un ranking social completo. El teorema se vuelve menos
-asfixiante; aparecen otros teoremas (por ejemplo sobre estrategia), pero
-ese es otro capítulo.</li>
+<li><strong>Relajar IIA</strong> y quedarte en rankings (Condorcet,
+Borda, ranked pairs).</li>
+<li><strong>Cambiar la boleta</strong> (approval, score, majority
+judgment, STAR).</li>
+<li><strong>Restringir el dominio</strong> (diseñar instituciones donde
+el eje sea creíble; mirar al mediano).</li>
+<li><strong>Bajar la exigencia de salida</strong> a un ganador,
+aceptando el debate sobre estrategia (GS).</li>
+<li><strong>Mezclar</strong>: por ejemplo, boleta numérica en un
+electorado aproximadamente single-peaked.</li>
 </ol>
 <p>En todos los casos, el spoiler deja de ser un accidente moral y pasa
 a ser un síntoma de diseño. La pelea útil no es “el sistema es
@@ -390,19 +613,144 @@ fraudulento” versus “el sistema es sagrado”. Es: ¿qué pregunta queremos
 que responda la boleta?</p>
 <h2 id="cierre">Cierre</h2>
 <p>Arrow no cierra el debate político: lo organiza. Obliga a declarar el
-marco (qué boleta, qué salida, qué axiomas) y a aceptar costos. Se puede
-estudiar con un perfil de cinco personas, con mil perfiles al azar, y
-con una prueba que una máquina mira por encima del hombro.</p>
+marco (qué boleta, qué salida, qué axiomas, qué dominio) y a aceptar
+costos. Se puede estudiar con un perfil de cinco personas, con mil
+perfiles al azar, con un eje de votante mediano, y con una prueba que
+una máquina mira por encima del hombro.</p>
 <p>Si querés pelearte con el teorema, mejor hacerlo con las manos en un
 perfil concreto que con un slogan.</p>
-<p>Probá el canónico: <a
+<p>Probá el canónico, el mediano y el Monte Carlo: <a
 href="https://pablogventura.github.io/arrow/">pablogventura.github.io/arrow</a>.</p>
+<hr />
+<h2 id="apéndice-tablas-de-simulación-para-poda">Apéndice: tablas de
+simulación (para poda)</h2>
+<p>Corridas de referencia: 200 perfiles, 25 votantes, semilla 7, tres
+candidatos. Archivos en <code>results/</code>.</p>
+<h3 id="a.-existencia-de-condorcet-por-modelo">A. Existencia de
+Condorcet por modelo</h3>
+<table>
+<thead>
+<tr>
+<th>Modelo</th>
+<th style="text-align: right;">Tasa Condorcet winner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IC</td>
+<td style="text-align: right;">92%</td>
+</tr>
+<tr>
+<td>Single-peaked / espacial 1D</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>Peaked + ruido</td>
+<td style="text-align: right;">95.5%</td>
+</tr>
+<tr>
+<td>Espacial 2D</td>
+<td style="text-align: right;">91%</td>
+</tr>
+<tr>
+<td>Mallows</td>
+<td style="text-align: right;">100%</td>
+</tr>
+</tbody>
+</table>
+<h3 id="b.-escapes-en-espacial-1d-peaked">B. Escapes en espacial 1D /
+peaked</h3>
+<table>
+<thead>
+<tr>
+<th>Método</th>
+<th>Grupo</th>
+<th style="text-align: right;">Eff. Condorcet</th>
+<th style="text-align: right;">Regret</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Approval (util)</td>
+<td>escape</td>
+<td style="text-align: right;">84%</td>
+<td style="text-align: right;">0.04</td>
+</tr>
+<tr>
+<td>Score (util)</td>
+<td>escape</td>
+<td style="text-align: right;">85.5%</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>Majority judgment</td>
+<td>escape</td>
+<td style="text-align: right;">78%</td>
+<td style="text-align: right;">1.00</td>
+</tr>
+<tr>
+<td>STAR</td>
+<td>escape</td>
+<td style="text-align: right;">100%</td>
+<td style="text-align: right;">0.27</td>
+</tr>
+</tbody>
+</table>
+<h3 id="c.-ic-utilidades-sintéticas-desde-ranking">C. IC (utilidades
+sintéticas desde ranking)</h3>
+<table>
+<thead>
+<tr>
+<th>Método</th>
+<th style="text-align: right;">Eff. Condorcet</th>
+<th style="text-align: right;">Regret</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pluralidad</td>
+<td style="text-align: right;">77%</td>
+<td style="text-align: right;">0.33</td>
+</tr>
+<tr>
+<td>Ranked pairs</td>
+<td style="text-align: right;">100%</td>
+<td style="text-align: right;">0.03</td>
+</tr>
+<tr>
+<td>Score util</td>
+<td style="text-align: right;">94%</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>MJ</td>
+<td style="text-align: right;">92%</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>STAR</td>
+<td style="text-align: right;">100%</td>
+<td style="text-align: right;">0.08</td>
+</tr>
+</tbody>
+</table>
+<h3 id="d.-archivos">D. Archivos</h3>
+<ul>
+<li><code>results/ic_vs_peaked_seed7.csv</code></li>
+<li><code>results/ic_seed7_n200.csv</code>,
+<code>peaked_seed7_n200.csv</code>,
+<code>peakedNoisy_seed7_n200.csv</code></li>
+<li><code>results/spatial1d_seed7_n200.csv</code>,
+<code>spatial2d_seed7_n200.csv</code>,
+<code>mallows_seed7_n200.csv</code></li>
+<li><code>results/method_agreement_spatial1d_seed7.csv</code></li>
+</ul>
 <hr />
 <p>Pablo Ventura (FaMAF).</p>
 <p>Lecturas: Arrow, <em>Social Choice and Individual Values</em>
-(1951/1963); Geanakoplos (2005), “Three brief proofs of Arrow’s
-Impossibility Theorem”; Yu (2012), “A one-shot proof of Arrow’s
-impossibility theorem”. Más referencias en <a
+(1951/1963); Geanakoplos (2005); Yu (2012); Black sobre el votante
+mediano; Balinski y Laraki sobre majority judgment; Gibbard (1973) y
+Satterthwaite (1975). Más en <a
 href="bibliografia.md">bibliografia.md</a>.</p>
 </body>
 </html>

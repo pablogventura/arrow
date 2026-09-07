@@ -1,0 +1,6 @@
+metric,ic,peaked
+condorcet_existence,0.92,1
+plurality_condorcet_eff,0.7717391304347826,0.28
+minimax_condorcet_eff,1,1
+scoreUtil_regret,0,0
+mj_regret,0,0.9987202166603515

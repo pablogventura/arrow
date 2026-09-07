@@ -2,6 +2,14 @@
 
 export const CANDS = ["A", "B", "C"];
 
+export const MJ_GRADES = [
+  "Rechazar",
+  "Insuficiente",
+  "Aceptable",
+  "Bien",
+  "Excelente",
+];
+
 /** Rankings as arrays: index 0 is most preferred. */
 export function prefers(ranking, x, y) {
   return ranking.indexOf(x) < ranking.indexOf(y);
@@ -54,7 +62,6 @@ export function borda(profile, cands = CANDS) {
   return argmax(scores, cands);
 }
 
-/** Minimax: minimize the worst pairwise defeat. */
 export function minimax(profile, cands = CANDS) {
   const worst = Object.fromEntries(cands.map((c) => [c, -Infinity]));
   for (const x of cands) {
@@ -92,7 +99,6 @@ export function irv(profile, cands = CANDS) {
   return remaining[0];
 }
 
-/** Copeland: wins minus losses in pairwise majority contests. */
 export function copeland(profile, cands = CANDS) {
   const scores = Object.fromEntries(cands.map((c) => [c, 0]));
   for (const x of cands) {
@@ -106,8 +112,50 @@ export function copeland(profile, cands = CANDS) {
   return argmax(scores, cands);
 }
 
-/** Approval: approve top `k` candidates (default ceil(m/2)). */
-export function approval(profile, cands = CANDS, k = null) {
+/** Tideman ranked pairs: lock strongest majority victories without cycles. */
+export function rankedPairs(profile, cands = CANDS) {
+  const pairs = [];
+  for (let i = 0; i < cands.length; i++) {
+    for (let j = 0; j < cands.length; j++) {
+      if (i === j) continue;
+      const m = pairwiseMargin(profile, cands[i], cands[j]);
+      if (m > 0) pairs.push({ x: cands[i], y: cands[j], m });
+    }
+  }
+  pairs.sort((a, b) => b.m - a.m || (a.x < b.x ? -1 : 1));
+  const locked = new Set();
+  const adj = Object.fromEntries(cands.map((c) => [c, []]));
+  function reaches(from, to, seen = new Set()) {
+    if (from === to) return true;
+    if (seen.has(from)) return false;
+    seen.add(from);
+    return adj[from].some((n) => reaches(n, to, seen));
+  }
+  for (const { x, y } of pairs) {
+    if (!reaches(y, x)) {
+      adj[x].push(y);
+      locked.add(`${x}>${y}`);
+    }
+  }
+  const beatCount = Object.fromEntries(cands.map((c) => [c, 0]));
+  for (const c of cands) beatCount[c] = adj[c].length;
+  // Source in the locked graph: most outgoing after topological preference
+  const indeg = Object.fromEntries(cands.map((c) => [c, 0]));
+  for (const c of cands) for (const n of adj[c]) indeg[n] += 1;
+  let best = cands[0];
+  for (const c of cands) {
+    if (
+      indeg[c] < indeg[best] ||
+      (indeg[c] === indeg[best] && beatCount[c] > beatCount[best]) ||
+      (indeg[c] === indeg[best] && beatCount[c] === beatCount[best] && c < best)
+    ) {
+      best = c;
+    }
+  }
+  return best;
+}
+
+export function approvalFromRanking(profile, cands = CANDS, k = null) {
   const thresh = k ?? Math.ceil(cands.length / 2);
   const scores = Object.fromEntries(cands.map((c) => [c, 0]));
   for (const r of profile) {
@@ -116,14 +164,11 @@ export function approval(profile, cands = CANDS, k = null) {
   return argmax(scores, cands);
 }
 
-/** Score/range from ranking: top gets m-1, ..., bottom 0 (same points as Borda).
- * Distinct from Borda only when ballots carry free scores; here we use ranking-induced scores
- * so the demo stays comparable, and note the escape in the article. */
+/** Score from ranking: same points as Borda (not a true escape). */
 export function scoreFromRanking(profile, cands = CANDS) {
   return borda(profile, cands);
 }
 
-/** True score voting when each voter supplies numeric utilities. */
 export function scoreFromUtilities(utilities, cands = CANDS) {
   const scores = Object.fromEntries(cands.map((c) => [c, 0]));
   for (const u of utilities) {
@@ -142,34 +187,148 @@ export function approvalFromUtilities(utilities, cands = CANDS, threshold = null
   return argmax(scores, cands);
 }
 
-export const METHODS = {
+/** Discretize utilities in [0,1] (or any range) into MJ grade indices 0..4. */
+export function gradesFromUtilities(utilities, cands = CANDS) {
+  return utilities.map((u) => {
+    const vals = cands.map((c) => u[c]);
+    const lo = Math.min(...vals);
+    const hi = Math.max(...vals);
+    const span = hi - lo || 1;
+    const g = {};
+    for (const c of cands) {
+      const t = (u[c] - lo) / span;
+      g[c] = Math.min(4, Math.floor(t * 5 - 1e-9));
+      if (t >= 1) g[c] = 4;
+    }
+    return g;
+  });
+}
+
+/**
+ * Majority judgment: median grade, then usual-procedure-style tie-break
+ * (remove one median grade from the leader's pile iteratively via +/- proportions).
+ */
+export function majorityJudgment(grades, cands = CANDS) {
+  function medianGrade(arr) {
+    const s = arr.slice().sort((a, b) => a - b);
+    return s[Math.floor((s.length - 1) / 2)];
+  }
+  function gradeList(cand) {
+    return grades.map((g) => g[cand]);
+  }
+  let remaining = cands.slice();
+  while (remaining.length > 1) {
+    const meds = Object.fromEntries(remaining.map((c) => [c, medianGrade(gradeList(c))]));
+    let bestMed = Math.max(...remaining.map((c) => meds[c]));
+    let contenders = remaining.filter((c) => meds[c] === bestMed);
+    if (contenders.length === 1) return contenders[0];
+    // Among contenders, compute p+ (share strictly above median) and p- (strictly below)
+    const score = {};
+    for (const c of contenders) {
+      const list = gradeList(c);
+      const m = meds[c];
+      const above = list.filter((g) => g > m).length / list.length;
+      const below = list.filter((g) => g < m).length / list.length;
+      score[c] = above - below;
+    }
+    let best = contenders[0];
+    for (const c of contenders) {
+      if (score[c] > score[best] || (score[c] === score[best] && c < best)) best = c;
+    }
+    // If still tied on score, pick lexicographically smallest among max score
+    const maxS = Math.max(...contenders.map((c) => score[c]));
+    const top = contenders.filter((c) => score[c] === maxS).sort();
+    return top[0];
+  }
+  return remaining[0];
+}
+
+/** STAR: score then automatic runoff between top two by score. */
+export function starFromUtilities(utilities, cands = CANDS) {
+  const scores = Object.fromEntries(cands.map((c) => [c, 0]));
+  for (const u of utilities) for (const c of cands) scores[c] += u[c];
+  const ordered = cands.slice().sort((a, b) => scores[b] - scores[a] || (a < b ? -1 : 1));
+  const a = ordered[0];
+  const b = ordered[1] ?? ordered[0];
+  if (a === b) return a;
+  let prefA = 0;
+  let prefB = 0;
+  for (const u of utilities) {
+    if (u[a] > u[b]) prefA += 1;
+    else if (u[b] > u[a]) prefB += 1;
+  }
+  if (prefA > prefB) return a;
+  if (prefB > prefA) return b;
+  return a < b ? a : b;
+}
+
+/** Ranking-only methods (Arrow frame / relax IIA). */
+export const RANKING_METHODS = {
   plurality,
   borda,
   minimax,
   copeland,
+  rankedPairs,
   irv,
-  approval,
-  score: scoreFromRanking,
+  approvalRanking: approvalFromRanking,
+  scoreRanking: scoreFromRanking,
 };
+
+/** Ballot / utility escapes (need utilities or grades). */
+export const ESCAPE_METHODS = {
+  approvalUtil: approvalFromUtilities,
+  scoreUtil: scoreFromUtilities,
+  majorityJudgment: (utilities, cands) =>
+    majorityJudgment(gradesFromUtilities(utilities, cands), cands),
+  star: starFromUtilities,
+};
+
+/** All callable as (profile, cands) OR for escapes we pass utilities via wrappers in sim. */
+export const METHODS = { ...RANKING_METHODS };
 
 export const METHOD_LABELS = {
   plurality: "Pluralidad",
   borda: "Borda",
   minimax: "Minimax",
   copeland: "Copeland",
+  rankedPairs: "Ranked pairs",
   irv: "IRV",
-  approval: "Approval",
-  score: "Score (via ranking)",
+  approvalRanking: "Approval (top-k ranking)",
+  scoreRanking: "Score (desde ranking)",
+  approvalUtil: "Approval (utilidades)",
+  scoreUtil: "Score (utilidades)",
+  majorityJudgment: "Majority judgment",
+  star: "STAR",
 };
 
 export const METHOD_BLURBS = {
-  plurality: "Solo mira el primer puesto. Un tercero puede 'robar' votos y cambiar el ganador entre los otros dos.",
-  borda: "Suma puntos por puesto. Usa todo el ranking; viola IIA con facilidad.",
-  minimax: "Elige a quien pierde menos feo mano a mano. Suele respetar Condorcet cuando existe.",
-  copeland: "Suma victorias pairwise menos derrotas. Amigable con Condorcet.",
-  irv: "Elimina al último de a uno. Puede fallar monotonía e IIA.",
-  approval: "Aprobar un subconjunto: sale del marco ranking-SWF de Arrow.",
-  score: "Puntajes numéricos (acá inducidos del ranking). Escape típico del teorema.",
+  plurality: "Solo mira el primer puesto. Spoiler clásico (rompe IIA).",
+  borda: "Puntos por puesto. Ranking completo; viola IIA.",
+  minimax: "Peor derrota pairwise. Suele respetar Condorcet.",
+  copeland: "Victorias menos derrotas pairwise.",
+  rankedPairs: "Bloquea victorias pairwise fuertes sin crear ciclos (Tideman).",
+  irv: "Eliminación del último. Puede fallar monotonía e IIA.",
+  approvalRanking: "Aprueba los top-k del ranking (sigue anclado al orden).",
+  scoreRanking: "Puntajes inducidos del ranking (= Borda). No es escape real.",
+  approvalUtil: "Aprueba según umbral sobre utilidades. Sale del input ranking.",
+  scoreUtil: "Suma utilidades. Escape clásico del marco Arrow.",
+  majorityJudgment: "Mediana de calificaciones ordinales. Boleta de juicios, no ranking.",
+  star: "Score + runoff automático entre los dos mejores. Boleta numérica.",
+};
+
+export const METHOD_GROUP = {
+  plurality: "ranking",
+  borda: "ranking",
+  minimax: "ranking",
+  copeland: "ranking",
+  rankedPairs: "ranking",
+  irv: "ranking",
+  approvalRanking: "ranking",
+  scoreRanking: "ranking",
+  approvalUtil: "escape",
+  scoreUtil: "escape",
+  majorityJudgment: "escape",
+  star: "escape",
 };
 
 function argmax(scores, cands) {

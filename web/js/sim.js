@@ -1,22 +1,22 @@
-/** Preference generation and Monte Carlo metrics. */
+/** Preference generation, escapes metrics, Monte Carlo. */
 
 import {
   CANDS,
-  METHODS,
+  RANKING_METHODS,
+  ESCAPE_METHODS,
   METHOD_LABELS,
   METHOD_BLURBS,
+  METHOD_GROUP,
   allRankings,
   condorcetWinner,
   majorityPrefers,
   rankingFromUtilities,
-  scoreFromUtilities,
-  approvalFromUtilities,
   pairwiseMargin,
+  gradesFromUtilities,
 } from "./voting.js";
 
-export { METHOD_LABELS, METHOD_BLURBS };
+export { METHOD_LABELS, METHOD_BLURBS, METHOD_GROUP, RANKING_METHODS, ESCAPE_METHODS };
 
-/** Canonical Condorcet cycle (matches Lean Canonical.voterRankings). */
 export const CANONICAL_PROFILE = [
   ["A", "B", "C"],
   ["A", "B", "C"],
@@ -25,55 +25,181 @@ export const CANONICAL_PROFILE = [
   ["C", "A", "B"],
 ];
 
+export const MODEL_LABELS = {
+  ic: "Impartial culture",
+  spatial1d: "Espacial 1D",
+  spatial2d: "Espacial 2D",
+  peaked: "Single-peaked",
+  peakedNoisy: "Single-peaked + ruido",
+  mallows: "Mallows",
+};
+
 export function explainCanonical(results) {
-  const lines = [
+  return [
     "Mayoría pairwise: A vence a B (3-2), B vence a C (4-1), C vence a A (3-2). Ciclo: no hay ganador de Condorcet.",
-    "Primeros puestos: A, A, B, B, C. Pluralidad empatan A y B (2) y el desempate por etiqueta elige A.",
-    `Borda mira todos los puestos y acá gana ${results.borda}.`,
-    `Minimax / Copeland miran mano a mano: ${results.minimax} / ${results.copeland}.`,
-    `IRV elimina al que va último en primeras: gana ${results.irv}.`,
-    "Approval y score (via ranking) usan más información que un solo 'tachito'; no refutan Arrow, cambian la boleta.",
+    "Primeros puestos: A, A, B, B, C. Pluralidad empatan A y B (2).",
+    `Borda gana ${results.borda}; ranked pairs ${results.rankedPairs}; minimax ${results.minimax}; Copeland ${results.copeland}.`,
+    `IRV gana ${results.irv}. Approval/score desde ranking no son escapes reales del teorema.`,
   ];
-  return lines;
 }
 
 export function impartialCulture(nVoters, cands = CANDS, rng = Math.random) {
   const ranks = allRankings(cands);
-  const profile = [];
-  for (let i = 0; i < nVoters; i++) {
-    profile.push(ranks[Math.floor(rng() * ranks.length)].slice());
-  }
-  return profile;
+  return Array.from({ length: nVoters }, () =>
+    ranks[Math.floor(rng() * ranks.length)].slice()
+  );
 }
 
-/** 1D spatial model: candidates and voters on a line; utility = -distance. */
 export function spatial1D(nVoters, cands = CANDS, rng = Math.random) {
   const candPos = {};
   cands.forEach((c, i) => {
-    candPos[c] = (i + 1) / (cands.length + 1) + (rng() - 0.5) * 0.05;
+    candPos[c] = (i + 1) / (cands.length + 1) + (rng() - 0.5) * 0.04;
+  });
+  const utilities = [];
+  const profile = [];
+  const voterPos = [];
+  for (let i = 0; i < nVoters; i++) {
+    const v = rng();
+    voterPos.push(v);
+    const u = {};
+    for (const c of cands) u[c] = -Math.abs(v - candPos[c]);
+    utilities.push(normalizeUtil(u, cands));
+    profile.push(rankingFromUtilities(u, cands));
+  }
+  return { profile, utilities, candPos, voterPos };
+}
+
+/** Alias narrativo: same as spatial1D (single-peaked rankings). */
+export function singlePeaked(nVoters, cands = CANDS, rng = Math.random) {
+  return spatial1D(nVoters, cands, rng);
+}
+
+/** Single-peaked then swap adjacent candidates with probability pNoise. */
+export function peakedNoisy(nVoters, cands = CANDS, rng = Math.random, pNoise = 0.25) {
+  const base = spatial1D(nVoters, cands, rng);
+  const profile = base.profile.map((r) => {
+    const copy = r.slice();
+    for (let i = 0; i < copy.length - 1; i++) {
+      if (rng() < pNoise) {
+        const t = copy[i];
+        copy[i] = copy[i + 1];
+        copy[i + 1] = t;
+      }
+    }
+    return copy;
+  });
+  // Rebuild utilities consistently with noisy ranking via positions still
+  return { ...base, profile };
+}
+
+export function spatial2D(nVoters, cands = CANDS, rng = Math.random) {
+  const candPos = {};
+  cands.forEach((c, i) => {
+    const angle = (2 * Math.PI * i) / cands.length;
+    candPos[c] = {
+      x: 0.5 + 0.35 * Math.cos(angle) + (rng() - 0.5) * 0.05,
+      y: 0.5 + 0.35 * Math.sin(angle) + (rng() - 0.5) * 0.05,
+    };
   });
   const utilities = [];
   const profile = [];
   for (let i = 0; i < nVoters; i++) {
-    const v = rng();
+    const vx = rng();
+    const vy = rng();
     const u = {};
-    for (const c of cands) u[c] = -Math.abs(v - candPos[c]);
-    utilities.push(u);
+    for (const c of cands) {
+      const dx = vx - candPos[c].x;
+      const dy = vy - candPos[c].y;
+      u[c] = -Math.sqrt(dx * dx + dy * dy);
+    }
+    utilities.push(normalizeUtil(u, cands));
     profile.push(rankingFromUtilities(u, cands));
   }
   return { profile, utilities, candPos };
 }
 
-/** Random utilities in [0,1] without geometry (for manual escape demos). */
-export function randomUtilities(nVoters, cands = CANDS, rng = Math.random) {
-  const utilities = [];
+/** Mallows model: sample rankings near a reference with dispersion phi in (0,1]. */
+export function mallows(nVoters, cands = CANDS, rng = Math.random, phi = 0.4) {
+  const ranks = allRankings(cands);
+  const ref = ranks[Math.floor(rng() * ranks.length)];
+  function kendall(a, b) {
+    let d = 0;
+    for (let i = 0; i < cands.length; i++) {
+      for (let j = i + 1; j < cands.length; j++) {
+        const ai = a.indexOf(cands[i]);
+        const aj = a.indexOf(cands[j]);
+        const bi = b.indexOf(cands[i]);
+        const bj = b.indexOf(cands[j]);
+        if ((ai - aj) * (bi - bj) < 0) d += 1;
+      }
+    }
+    return d;
+  }
+  const weights = ranks.map((r) => Math.pow(phi, kendall(r, ref)));
+  const sum = weights.reduce((a, b) => a + b, 0);
+  const profile = [];
   for (let i = 0; i < nVoters; i++) {
+    let t = rng() * sum;
+    let chosen = ranks[0];
+    for (let k = 0; k < ranks.length; k++) {
+      t -= weights[k];
+      if (t <= 0) {
+        chosen = ranks[k];
+        break;
+      }
+    }
+    profile.push(chosen.slice());
+  }
+  // Synthetic utilities from rank positions for escape methods
+  const m = cands.length;
+  const utilities = profile.map((r) => {
+    const u = {};
+    r.forEach((c, i) => {
+      u[c] = (m - 1 - i) / (m - 1 || 1);
+    });
+    return u;
+  });
+  return { profile, utilities, ref };
+}
+
+export function randomUtilities(nVoters, cands = CANDS, rng = Math.random) {
+  const utilities = Array.from({ length: nVoters }, () => {
     const u = {};
     for (const c of cands) u[c] = rng();
-    utilities.push(u);
-  }
+    return u;
+  });
   const profile = utilities.map((u) => rankingFromUtilities(u, cands));
   return { profile, utilities };
+}
+
+function normalizeUtil(u, cands) {
+  const vals = cands.map((c) => u[c]);
+  const lo = Math.min(...vals);
+  const hi = Math.max(...vals);
+  const span = hi - lo || 1;
+  const out = {};
+  for (const c of cands) out[c] = (u[c] - lo) / span;
+  return out;
+}
+
+export function generateModel(model, nVoters, cands = CANDS, rng = Math.random) {
+  switch (model) {
+    case "ic":
+      return { profile: impartialCulture(nVoters, cands, rng), utilities: null };
+    case "spatial":
+    case "spatial1d":
+      return spatial1D(nVoters, cands, rng);
+    case "spatial2d":
+      return spatial2D(nVoters, cands, rng);
+    case "peaked":
+      return singlePeaked(nVoters, cands, rng);
+    case "peakedNoisy":
+      return peakedNoisy(nVoters, cands, rng);
+    case "mallows":
+      return mallows(nVoters, cands, rng);
+    default:
+      return spatial1D(nVoters, cands, rng);
+  }
 }
 
 export function utilitarianWinner(utilities, cands = CANDS) {
@@ -107,17 +233,29 @@ export function iiaStress(profile, methodFn, cands = CANDS) {
   return { changed: winExt !== base, base, winExt };
 }
 
+export function medianVoterWinner(voterPos, candPos, cands = CANDS) {
+  const sorted = voterPos.slice().sort((a, b) => a - b);
+  const med = sorted[Math.floor((sorted.length - 1) / 2)];
+  let best = cands[0];
+  for (const c of cands) {
+    if (Math.abs(candPos[c] - med) < Math.abs(candPos[best] - med)) best = c;
+  }
+  return { median: med, winner: best };
+}
+
 export function runElection(profile, utilities = null, cands = CANDS) {
   const results = {};
-  for (const [name, fn] of Object.entries(METHODS)) {
+  for (const [name, fn] of Object.entries(RANKING_METHODS)) {
     results[name] = fn(profile, cands);
   }
   if (utilities) {
-    results.scoreUtil = scoreFromUtilities(utilities, cands);
-    results.approvalUtil = approvalFromUtilities(utilities, cands);
+    for (const [name, fn] of Object.entries(ESCAPE_METHODS)) {
+      results[name] = fn(utilities, cands);
+    }
+    results.utilitarian = utilitarianWinner(utilities, cands);
+    results._grades = gradesFromUtilities(utilities, cands);
   }
   results.condorcet = condorcetWinner(profile, cands);
-  if (utilities) results.utilitarian = utilitarianWinner(utilities, cands);
   results._margins = {};
   for (const x of cands) {
     for (const y of cands) {
@@ -130,13 +268,15 @@ export function runElection(profile, utilities = null, cands = CANDS) {
 export function monteCarlo({
   nRuns = 200,
   nVoters = 25,
-  model = "spatial",
+  model = "spatial1d",
   cands = CANDS,
   rng = Math.random,
 } = {}) {
-  const methodNames = Object.keys(METHODS);
+  const rankingNames = Object.keys(RANKING_METHODS);
+  const escapeNames = Object.keys(ESCAPE_METHODS);
+  const allNames = [...rankingNames, ...escapeNames];
   const stats = {};
-  for (const m of methodNames) {
+  for (const m of allNames) {
     stats[m] = {
       condorcetHits: 0,
       condorcetOpps: 0,
@@ -146,30 +286,48 @@ export function monteCarlo({
       majorityTop: 0,
     };
   }
+  let condorcetExists = 0;
 
   for (let t = 0; t < nRuns; t++) {
-    let profile;
-    let utilities = null;
-    if (model === "ic") {
-      profile = impartialCulture(nVoters, cands, rng);
-    } else {
-      const s = spatial1D(nVoters, cands, rng);
-      profile = s.profile;
-      utilities = s.utilities;
+    const gen = generateModel(model, nVoters, cands, rng);
+    const { profile } = gen;
+    let { utilities } = gen;
+    if (!utilities) {
+      // IC: synthetic utilities from ranks for escape comparison
+      const m = cands.length;
+      utilities = profile.map((r) => {
+        const u = {};
+        r.forEach((c, i) => {
+          u[c] = (m - 1 - i) / (m - 1 || 1);
+        });
+        return u;
+      });
     }
     const cw = condorcetWinner(profile, cands);
-    for (const m of methodNames) {
-      const w = METHODS[m](profile, cands);
+    if (cw !== null) condorcetExists += 1;
+
+    for (const m of rankingNames) {
+      const w = RANKING_METHODS[m](profile, cands);
       if (cw !== null) {
         stats[m].condorcetOpps += 1;
         if (w === cw) stats[m].condorcetHits += 1;
       }
-      if (utilities) {
-        stats[m].regretSum += utilitarianRegret(utilities, w, cands);
-        stats[m].regretN += 1;
+      stats[m].regretSum += utilitarianRegret(utilities, w, cands);
+      stats[m].regretN += 1;
+      if (iiaStress(profile, RANKING_METHODS[m], cands).changed) stats[m].iiaChanges += 1;
+      if (cands.every((y) => y === w || majorityPrefers(profile, w, y))) {
+        stats[m].majorityTop += 1;
       }
-      const stress = iiaStress(profile, METHODS[m], cands);
-      if (stress.changed) stats[m].iiaChanges += 1;
+    }
+    for (const m of escapeNames) {
+      const w = ESCAPE_METHODS[m](utilities, cands);
+      if (cw !== null) {
+        stats[m].condorcetOpps += 1;
+        if (w === cw) stats[m].condorcetHits += 1;
+      }
+      stats[m].regretSum += utilitarianRegret(utilities, w, cands);
+      stats[m].regretN += 1;
+      // IIA stress less meaningful for util methods; skip or count 0
       if (cands.every((y) => y === w || majorityPrefers(profile, w, y))) {
         stats[m].majorityTop += 1;
       }
@@ -177,16 +335,65 @@ export function monteCarlo({
   }
 
   const summary = {};
-  for (const m of methodNames) {
+  for (const m of allNames) {
     const s = stats[m];
     summary[m] = {
+      group: METHOD_GROUP[m],
       condorcetEfficiency: s.condorcetOpps ? s.condorcetHits / s.condorcetOpps : null,
       meanRegret: s.regretN ? s.regretSum / s.regretN : null,
-      iiaChangeRate: s.iiaChanges / nRuns,
+      iiaChangeRate: rankingNames.includes(m) ? s.iiaChanges / nRuns : null,
       majorityTopRate: s.majorityTop / nRuns,
     };
   }
+  summary._meta = {
+    condorcetExistenceRate: condorcetExists / nRuns,
+    nRuns,
+    nVoters,
+    model,
+  };
   return summary;
+}
+
+/** Agreement matrix: fraction of runs where method i and j agree. */
+export function methodAgreement({
+  nRuns = 100,
+  nVoters = 25,
+  model = "spatial1d",
+  rng = Math.random,
+  cands = CANDS,
+} = {}) {
+  const names = [...Object.keys(RANKING_METHODS), ...Object.keys(ESCAPE_METHODS)];
+  const agree = {};
+  for (const a of names) {
+    agree[a] = {};
+    for (const b of names) agree[a][b] = 0;
+  }
+  for (let t = 0; t < nRuns; t++) {
+    const gen = generateModel(model, nVoters, cands, rng);
+    let { profile, utilities } = gen;
+    if (!utilities) {
+      const m = cands.length;
+      utilities = profile.map((r) => {
+        const u = {};
+        r.forEach((c, i) => {
+          u[c] = (m - 1 - i) / (m - 1 || 1);
+        });
+        return u;
+      });
+    }
+    const wins = {};
+    for (const m of Object.keys(RANKING_METHODS)) wins[m] = RANKING_METHODS[m](profile, cands);
+    for (const m of Object.keys(ESCAPE_METHODS)) wins[m] = ESCAPE_METHODS[m](utilities, cands);
+    for (const a of names) {
+      for (const b of names) {
+        if (wins[a] === wins[b]) agree[a][b] += 1;
+      }
+    }
+  }
+  for (const a of names) {
+    for (const b of names) agree[a][b] /= nRuns;
+  }
+  return { names, agree };
 }
 
 export function mulberry32(seed) {
