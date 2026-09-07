@@ -271,9 +271,34 @@ Cinco actitudes posibles, todas legítimas si se declaran:
 
 En todos los casos, el spoiler deja de ser un accidente moral y pasa a ser un síntoma de diseño. La pelea útil no es "el sistema es fraudulento" versus "el sistema es sagrado". Es: ¿qué pregunta queremos que responda la boleta?
 
+## Una propuesta débil (no una panacea)
+
+Sin vender un único método correcto, se puede defender una postura mínima:
+
+1. Si el conflicto se parece a un **eje** (izquierda-derecha, más-menos, cerca-lejos), tomá en serio el **votante mediano** y los métodos que respetan Condorcet (minimax, Copeland, ranked pairs). Ahí Arrow afloja porque el dominio ya no es universal.
+2. Si la boleta puede ser más rica que un tachito, preferí **score** (o STAR) cuando importa maximizar bienestar agregado aproximado, o **majority judgment** cuando importa un juicio ordinal con mediana y no una suma.
+3. Usá **pluralidad** solo si priorizás simplicidad extrema y aceptás spoilers a cambio. No la trates como neutra ni como "la voluntad del pueblo" por defecto.
+4. Declará siempre el marco: qué boleta, qué salida (ganador vs ranking), qué axioma estás dispuesto a soltar.
+
+Eso no cierra la política. Evita el salto mágico de "Arrow demostró que da igual".
+
+## Recomendación condicional (árbol corto)
+
+| Si... | Entonces, como primera opción de diseño... | Aceptá que... |
+|-------|--------------------------------------------|---------------|
+| El electorado es aproximadamente unidimensional | Condorcet / mediano (minimax, Copeland, ranked pairs) | Puede haber ciclos si el eje se rompe |
+| Hay muchos candidatos y querés boleta simple pero no solo "primero" | Approval (con umbral claro) | La gente disputa quién "merece" aprobación |
+| Podés pedir números y te importa el bienestar agregado | Score / range (utilidades o escala 0-10) | Inflación estratégica de puntajes |
+| Querés juicios ("malo / aceptable / excelente") más que suma | Majority judgment | No optimiza regret utilitario |
+| Querés un híbrido score + duelo final | STAR | Sigue siendo boleta numérica, no ranking Arrow |
+| Solo importa un ganador y la boleta será ranking | Relajar IIA a propósito (Condorcet o Borda); no fingir IIA | Spoiler / agenda / otros costos |
+| La prioridad absoluta es el papelito más simple del mundo | Pluralidad | Spoilers frecuentes; mala eficiencia Condorcet en ejes |
+
+Cómo leer la tabla: no es un ranking moral de métodos. Es un **mapa si-entonces**. En el sitio, el panel mediano y el Monte Carlo (IC vs peaked vs espacial) sirven para chequear si tu "si..." se parece al modelo que estás asumiendo.
+
 ## Cierre
 
-Arrow no cierra el debate político: lo organiza. Obliga a declarar el marco (qué boleta, qué salida, qué axiomas, qué dominio) y a aceptar costos. Se puede estudiar con un perfil de cinco personas, con mil perfiles al azar, con un eje de votante mediano, y con una prueba que una máquina mira por encima del hombro.
+Arrow no cierra el debate político: lo organiza. Obliga a declarar el marco (qué boleta, qué salida, qué axiomas, qué dominio) y a aceptar costos. La propuesta débil y la tabla condicional son brújulas, no dogmas: se pueden estudiar con un perfil de cinco personas, con mil perfiles al azar, con un eje de votante mediano, y con una prueba que una máquina mira por encima del hombro.
 
 Si querés pelearte con el teorema, mejor hacerlo con las manos en un perfil concreto que con un slogan.
 

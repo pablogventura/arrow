@@ -611,10 +611,91 @@ electorado aproximadamente single-peaked.</li>
 a ser un síntoma de diseño. La pelea útil no es “el sistema es
 fraudulento” versus “el sistema es sagrado”. Es: ¿qué pregunta queremos
 que responda la boleta?</p>
+<h2 id="una-propuesta-débil-no-una-panacea">Una propuesta débil (no una
+panacea)</h2>
+<p>Sin vender un único método correcto, se puede defender una postura
+mínima:</p>
+<ol type="1">
+<li>Si el conflicto se parece a un <strong>eje</strong>
+(izquierda-derecha, más-menos, cerca-lejos), tomá en serio el
+<strong>votante mediano</strong> y los métodos que respetan Condorcet
+(minimax, Copeland, ranked pairs). Ahí Arrow afloja porque el dominio ya
+no es universal.</li>
+<li>Si la boleta puede ser más rica que un tachito, preferí
+<strong>score</strong> (o STAR) cuando importa maximizar bienestar
+agregado aproximado, o <strong>majority judgment</strong> cuando importa
+un juicio ordinal con mediana y no una suma.</li>
+<li>Usá <strong>pluralidad</strong> solo si priorizás simplicidad
+extrema y aceptás spoilers a cambio. No la trates como neutra ni como
+“la voluntad del pueblo” por defecto.</li>
+<li>Declará siempre el marco: qué boleta, qué salida (ganador vs
+ranking), qué axioma estás dispuesto a soltar.</li>
+</ol>
+<p>Eso no cierra la política. Evita el salto mágico de “Arrow demostró
+que da igual”.</p>
+<h2 id="recomendación-condicional-árbol-corto">Recomendación condicional
+(árbol corto)</h2>
+<table>
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 66%" />
+<col style="width: 22%" />
+</colgroup>
+<thead>
+<tr>
+<th>Si…</th>
+<th>Entonces, como primera opción de diseño…</th>
+<th>Aceptá que…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>El electorado es aproximadamente unidimensional</td>
+<td>Condorcet / mediano (minimax, Copeland, ranked pairs)</td>
+<td>Puede haber ciclos si el eje se rompe</td>
+</tr>
+<tr>
+<td>Hay muchos candidatos y querés boleta simple pero no solo
+“primero”</td>
+<td>Approval (con umbral claro)</td>
+<td>La gente disputa quién “merece” aprobación</td>
+</tr>
+<tr>
+<td>Podés pedir números y te importa el bienestar agregado</td>
+<td>Score / range (utilidades o escala 0-10)</td>
+<td>Inflación estratégica de puntajes</td>
+</tr>
+<tr>
+<td>Querés juicios (“malo / aceptable / excelente”) más que suma</td>
+<td>Majority judgment</td>
+<td>No optimiza regret utilitario</td>
+</tr>
+<tr>
+<td>Querés un híbrido score + duelo final</td>
+<td>STAR</td>
+<td>Sigue siendo boleta numérica, no ranking Arrow</td>
+</tr>
+<tr>
+<td>Solo importa un ganador y la boleta será ranking</td>
+<td>Relajar IIA a propósito (Condorcet o Borda); no fingir IIA</td>
+<td>Spoiler / agenda / otros costos</td>
+</tr>
+<tr>
+<td>La prioridad absoluta es el papelito más simple del mundo</td>
+<td>Pluralidad</td>
+<td>Spoilers frecuentes; mala eficiencia Condorcet en ejes</td>
+</tr>
+</tbody>
+</table>
+<p>Cómo leer la tabla: no es un ranking moral de métodos. Es un
+<strong>mapa si-entonces</strong>. En el sitio, el panel mediano y el
+Monte Carlo (IC vs peaked vs espacial) sirven para chequear si tu “si…”
+se parece al modelo que estás asumiendo.</p>
 <h2 id="cierre">Cierre</h2>
 <p>Arrow no cierra el debate político: lo organiza. Obliga a declarar el
 marco (qué boleta, qué salida, qué axiomas, qué dominio) y a aceptar
-costos. Se puede estudiar con un perfil de cinco personas, con mil
+costos. La propuesta débil y la tabla condicional son brújulas, no
+dogmas: se pueden estudiar con un perfil de cinco personas, con mil
 perfiles al azar, con un eje de votante mediano, y con una prueba que
 una máquina mira por encima del hombro.</p>
 <p>Si querés pelearte con el teorema, mejor hacerlo con las manos en un
