@@ -1,97 +1,28 @@
-# Agregar preferencias: el teorema de Arrow, Lean y simulaciones
+# El spoiler no es un bug raro
 
-## 1. El problema
+Hay una escena que se repite en cada elección con más de dos opciones serias. Aparece un tercero. No gana. Pero alcanza para dar vuelta el resultado entre los otros dos. La bronca pública habla de "votos robados", de "el sistema está roto". Kenneth Arrow, en 1951, mostró algo más incómodo: bajo un diseño preciso, **no existe** una regla que agregue rankings individuales en un ranking colectivo y cumpla a la vez tres virtudes que suenan obvias.
 
-Un grupo tiene que elegir. Cada persona ordena las opciones: candidatas a un cargo, proyectos de un presupuesto, sabores de helado. ¿Cómo pasar de muchos rankings individuales a una decisión colectiva?
+Eso no dice que "la democracia es imposible". Dice que ese combo de exigencias no entra en una sola máquina. El resto es diseño: qué virtudes priorizar, y con qué tipo de boleta.
 
-La intuición dice que debería existir un procedimiento "justo". Kenneth Arrow demostró en 1951 que, bajo un diseño preciso (rankings estrictos, una función que produce un ranking social, y tres axiomas razonables), esa esperanza choca con un teorema de imposibilidad cuando hay al menos tres alternativas.
+Podés jugarlo acá: [simulaciones Arrow](https://pablogventura.github.io/arrow/).
 
-Este texto no pretende asustar con la frase "la democracia es imposible". El teorema acota un marco. Fuera de ese marco hay métodos útiles; dentro, hay tensiones inevitables. Acá combinamos tres formas de mirar el mismo hecho:
+## Tres virtudes que no conviven
 
-1. Una explicación en prosa para lectores cultos.
-2. Definiciones y comprobaciones en Lean 4 (`lean/`).
-3. Simulaciones en el [sitio](../web/index.html) para ver cómo se comportan pluralidad, Borda, minimax, IRV, approval y score.
+Imagina candidatos A, B y C. Cada persona entrega un orden estricto. Una **función de bienestar social** no solo elige un ganador: ordena a todos.
 
-## 2. El modelo
+Pedimos:
 
-Fijemos un conjunto de candidatos, digamos `{A, B, C}`. Cada votante entrega un **ranking** estricto: un orden total. Un **perfil** es la lista de rankings de todos los votantes.
+1. **Unanimidad.** Si todo el mundo prefiere X a Y, el orden social también.
+2. **Independencia de alternativas irrelevantes (IIA).** El veredicto entre X e Y solo depende de cómo cada quien compara X e Y. Un tercero Z no debería dar vuelta esa pelea.
+3. **No dictadura.** Nadie tiene veto permanente: su gusto no se copia siempre al ranking social.
 
-Una **función de bienestar social** (social welfare function, SWF) toma un perfil y devuelve un ranking social. No solo elige un ganador: ordena todas las alternativas.
+**Teorema de Arrow.** Con al menos tres candidatos y al menos dos votantes, no hay regla que cumpla las tres a la vez.
 
-Eso ya es una decisión de diseño. Muchas elecciones reales solo necesitan un ganador. Arrow estudia el caso más exigente: un orden social completo.
+IIA es la más discutida. Suena limpia. También es la que castiga a métodos como Borda, que usan todo el ranking. El spoiler de la pluralidad es, en buena medida, IIA rompiéndose en público.
 
-## 3. Tres axiomas
+## Un laboratorio mínimo
 
-### Unanimidad (Pareto débil)
-
-Si todo el mundo prefiere `X` a `Y`, el ranking social también lo hace. Si nadie defiende lo contrario, la sociedad no debería inventar un gusto colectivo disidente.
-
-### Independencia de alternativas irrelevantes (IIA)
-
-La comparación social entre `X` e `Y` solo depende de cómo cada votante compara `X` e `Y`. Si alguien cambia de opinión sobre un tercero `Z`, eso no debería dar vuelta el veredicto entre `X` e `Y`.
-
-IIA es el axioma más discutido. Suena limpio, pero elimina mucha información que métodos como Borda usan (los puntajes relativos).
-
-### No dictadura
-
-No hay un votante cuya preferencia estricta se copie siempre al ranking social, pase lo que pase con el resto.
-
-## 4. Qué dice Arrow (y qué no)
-
-**Teorema (Arrow, versión estricta para rankings).** Con al menos tres candidatos y al menos dos votantes, no existe una SWF que cumpla unanimidad, IIA y no dictadura a la vez.
-
-Qué **no** dice:
-
-- No dice que votar sea inútil.
-- No dice que todo método sea igual de malo.
-- No prohíbe elegir un solo ganador con reglas que relajan IIA, o que no producen un orden social completo, o que usan boletas que no son rankings (approval, puntajes).
-
-La lectura útil: si pedís demasiadas virtudes a la vez en el marco ranking-SWF, el sistema se rompe. Entonces hay que elegir qué virtudes priorizar.
-
-## 5. Puente a Lean
-
-En `lean/Arrow/` formalizamos candidatos, los seis rankings posibles sobre tres alternativas, perfiles y SWF.
-
-- `Pref.lean` y `Axioms.lean`: el vocabulario (unanimidad, IIA, dictador).
-- `Finite3.lean`: comprobamos que la dictadura cumple unanimidad e IIA, y que una regla "con spoiler" viola IIA (ejemplo mecánico del axioma).
-- `Canonical.lean`: el perfil de cinco votantes con ciclo de Condorcet `A>B`, `B>C`, `C>A`, el mismo escenario que carga el botón **Canónico** del sitio.
-- `General.lean`: el enunciado clásico `no ArrowConditions` para todo `n >= 2`, dejado como **residual documentado** (estrategia del votante pivotal, Yu 2012). El artículo no finge que esa prueba larga ya está cerrada en la máquina; sí deja el enunciado preciso para seguir formalizando.
-
-Compilar:
-
-```bash
-cd lean && lake build
-```
-
-## 6. Métodos que relajan algo
-
-| Método | Idea | Qué suele soltar |
-|--------|------|------------------|
-| Pluralidad | Solo cuenta el primero | IIA (efecto spoiler) |
-| Borda | Puntos según el puesto | IIA |
-| Minimax | Minimiza la peor derrota pairwise | A veces otras propiedades Condorcet |
-| IRV | Eliminación del último | IIA; monotonicidad en algunos casos |
-| Approval | Aprobar un subconjunto | Sale del marco ranking puro |
-| Score / range | Puntajes numéricos | Sale del marco ranking puro |
-
-Approval y score no son contraejemplos de Arrow: cambian el tipo de boleta. Por eso el sitio los incluye como **escapes**, no como refutaciones.
-
-## 7. Simulaciones: cómo medimos "voluntad"
-
-No hay un utilitarismo objetivo escondido detrás de Arrow. Para comparar métodos igual usamos proxies honestos:
-
-1. **Eficiencia de Condorcet**: cuando existe un candidato que gana todos los mano a mano, ¿lo elige el método?
-2. **Regret utilitario**: en un modelo espacial 1D (votantes y candidatos en una recta), cada uno tiene utilidades latentes; medimos cuánto se pierde frente al maximizador de la suma.
-3. **Estrés tipo IIA**: agregamos un candidato spoiler al final de los rankings y vemos si cambia el ganador entre los originales.
-4. **Top mayoritario**: ¿el ganador vence a todos por mayoría pairwise?
-
-El modelo **impartial culture** sortea rankings uniformes (duro, poco realista). El **espacial 1D** es más interpretable para "voluntad del grupo" en un eje izquierda-derecha o similar.
-
-Nada de eso "demuestra" cuál método es el correcto. Sí muestra trade-offs visibles: por ejemplo, minimax suele ir bien en Condorcet; pluralidad sufre spoilers; approval/score con utilidades latentes pueden bajar el regret porque usan más información.
-
-## 8. El escenario canónico
-
-Cinco votantes:
+Cinco votantes, tres candidatos:
 
 1. A > B > C  
 2. A > B > C  
@@ -99,14 +30,53 @@ Cinco votantes:
 4. B > C > A  
 5. C > A > B  
 
-Mayoría: A vence a B (3-2), B vence a C (4-1), C vence a A (3-2). Hay ciclo: no hay ganador de Condorcet. Pluralidad empata A y B en primeros puestos (2 cada uno). Distintos métodos desempatan distinto. Es el laboratorio mínimo donde se siente la tensión que el teorema vuelve inevitable en el caso general.
+Mano a mano: A vence a B, B vence a C, C vence a A. **Ciclo de Condorcet**: no hay alguien que gane todos los duelos. Pluralidad mira solo el primero (dos A, dos B, un C) y desempatar ya es política disfrazada de aritmética. Borda, minimax, Copeland e IRV responden distinto porque leen el mismo perfil con otra pregunta.
 
-## 9. Cierre
+En el sitio, el botón **Canónico** carga exactamente ese perfil (el mismo que verifica el código Lean del proyecto).
 
-Arrow no cierra el debate político: lo organiza. Obliga a declarar el marco (qué boleta, qué salida, qué axiomas) y a aceptar que el diseño tiene costos.
+## Qué hacen los métodos (y qué sueltan)
 
-La formalización en Lean obliga a no mezclar definiciones. La simulación obliga a mirar magnitudes, no solo existencias. Juntas son una buena mesa de trabajo para estudiar agregación de preferencias sin magia ni cinismo.
+| Método | Pregunta que hace | Qué suele soltar |
+|--------|-------------------|------------------|
+| Pluralidad | Quién tiene más primeros | IIA (spoiler) |
+| Borda | Cuántos puntos por puesto | IIA |
+| Minimax / Copeland | Cómo les va mano a mano | Otras propiedades, según el caso |
+| IRV | Eliminar al último de a uno | IIA; a veces monotonía |
+| Approval | A quién apruebo | Sale del marco ranking puro |
+| Score | Qué puntaje le pongo | Sale del marco ranking puro |
 
-## Lecturas
+Approval y score **no refutan** Arrow: cambian la boleta. Por eso en el interactivo hay un botón **Utilidades (escape)**: mismas personas, pero approval/score leen números, no solo el orden.
 
-Ver [bibliografia.md](bibliografia.md).
+## Números, no magia
+
+En un modelo espacial 1D (votantes y candidatos en una recta; 200 corridas, 25 votantes, semilla 7) se ve el trade-off típico:
+
+| Método | Eficiencia Condorcet | Regret medio | Cambio tipo IIA |
+|--------|---------------------:|-------------:|----------------:|
+| Pluralidad | 28.5% | 0.73 | 0% |
+| Borda | 91% | 0.01 | 18% |
+| Minimax | 100% | 0.01 | 0.5% |
+| Copeland | 100% | 0.01 | 0% |
+| IRV | 49.5% | 0.53 | 0% |
+| Approval | 82.5% | 0.06 | 15.5% |
+| Score (via ranking) | 91% | 0.01 | 18% |
+
+Métodos tipo Condorcet (minimax, Copeland, Borda) clavan alto cuando existe ganador de Condorcet y bajan el regret utilitario; pluralidad e IRV sufren más. No hay "voluntad verdadera" escondida: hay proxies. El valor está en ver magnitudes.
+
+Detalle reproducible en el repo (`results/spatial_seed7_n200.csv`) y en el panel Monte Carlo del sitio.
+
+## Una prueba que se puede chequear
+
+Además del texto y las simulaciones, el proyecto formaliza en Lean 4 el vocabulario (preferencias, axiomas), muestra que la dictadura salva unanimidad e IIA, exhibe una regla que viola IIA, y fija el ciclo canónico. La imposibilidad clásica (Yu 2012: votante pivotal) está enunciada; la contagión pairwise para dos votantes está chequeada; el paso final a dictador sigue como residual documentado. No es postureo de "todo demostrado en la máquina": es un puente entre divulgación y formalización.
+
+Código: [github.com/pablogventura/arrow](https://github.com/pablogventura/arrow).
+
+## Cierre
+
+Arrow no cierra el debate: lo organiza. Obliga a declarar el marco (qué boleta, qué salida, qué axiomas) y a aceptar costos. El spoiler deja de ser un accidente moral y pasa a ser un síntoma de diseño.
+
+Si querés pelearte con el teorema, mejor hacerlo con las manos en un perfil concreto que con un slogan.
+
+---
+
+Pablo Ventura (FaMAF). Lecturas: Arrow (1951); Geanakoplos (2005); Yu (2012). Ver [bibliografia.md](bibliografia.md).

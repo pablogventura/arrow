@@ -4,15 +4,17 @@ import {
   CANDS,
   METHODS,
   METHOD_LABELS,
+  METHOD_BLURBS,
   allRankings,
   condorcetWinner,
   majorityPrefers,
   rankingFromUtilities,
   scoreFromUtilities,
   approvalFromUtilities,
+  pairwiseMargin,
 } from "./voting.js";
 
-export { METHOD_LABELS };
+export { METHOD_LABELS, METHOD_BLURBS };
 
 /** Canonical Condorcet cycle (matches Lean Canonical.voterRankings). */
 export const CANONICAL_PROFILE = [
@@ -22,6 +24,18 @@ export const CANONICAL_PROFILE = [
   ["B", "C", "A"],
   ["C", "A", "B"],
 ];
+
+export function explainCanonical(results) {
+  const lines = [
+    "Mayoría pairwise: A vence a B (3-2), B vence a C (4-1), C vence a A (3-2). Ciclo: no hay ganador de Condorcet.",
+    "Primeros puestos: A, A, B, B, C. Pluralidad empatan A y B (2) y el desempate por etiqueta elige A.",
+    `Borda mira todos los puestos y acá gana ${results.borda}.`,
+    `Minimax / Copeland miran mano a mano: ${results.minimax} / ${results.copeland}.`,
+    `IRV elimina al que va último en primeras: gana ${results.irv}.`,
+    "Approval y score (via ranking) usan más información que un solo 'tachito'; no refutan Arrow, cambian la boleta.",
+  ];
+  return lines;
+}
 
 export function impartialCulture(nVoters, cands = CANDS, rng = Math.random) {
   const ranks = allRankings(cands);
@@ -50,6 +64,18 @@ export function spatial1D(nVoters, cands = CANDS, rng = Math.random) {
   return { profile, utilities, candPos };
 }
 
+/** Random utilities in [0,1] without geometry (for manual escape demos). */
+export function randomUtilities(nVoters, cands = CANDS, rng = Math.random) {
+  const utilities = [];
+  for (let i = 0; i < nVoters; i++) {
+    const u = {};
+    for (const c of cands) u[c] = rng();
+    utilities.push(u);
+  }
+  const profile = utilities.map((u) => rankingFromUtilities(u, cands));
+  return { profile, utilities };
+}
+
 export function utilitarianWinner(utilities, cands = CANDS) {
   const scores = Object.fromEntries(cands.map((c) => [c, 0]));
   for (const u of utilities) for (const c of cands) scores[c] += u[c];
@@ -66,19 +92,14 @@ export function utilitarianRegret(utilities, winner, cands = CANDS) {
   return sum(opt) - sum(winner);
 }
 
-/** IIA stress: insert a spoiler candidate in a strong position for some voters. */
 export function iiaStress(profile, methodFn, cands = CANDS) {
   const base = methodFn(profile, cands);
   const extra = "S";
   const extendedCands = cands.concat([extra]);
   const extended = profile.map((r, idx) => {
     const copy = r.slice();
-    // Half the electorate ranks the spoiler second; others put it last.
-    if (idx % 2 === 0 && copy.length >= 1) {
-      copy.splice(1, 0, extra);
-    } else {
-      copy.push(extra);
-    }
+    if (idx % 2 === 0 && copy.length >= 1) copy.splice(1, 0, extra);
+    else copy.push(extra);
     return copy;
   });
   const winExt = methodFn(extended, extendedCands);
@@ -97,6 +118,12 @@ export function runElection(profile, utilities = null, cands = CANDS) {
   }
   results.condorcet = condorcetWinner(profile, cands);
   if (utilities) results.utilitarian = utilitarianWinner(utilities, cands);
+  results._margins = {};
+  for (const x of cands) {
+    for (const y of cands) {
+      if (x < y) results._margins[`${x}${y}`] = pairwiseMargin(profile, x, y);
+    }
+  }
   return results;
 }
 
@@ -143,7 +170,6 @@ export function monteCarlo({
       }
       const stress = iiaStress(profile, METHODS[m], cands);
       if (stress.changed) stats[m].iiaChanges += 1;
-      // majority agreement: winner beats every other by majority?
       if (cands.every((y) => y === w || majorityPrefers(profile, w, y))) {
         stats[m].majorityTop += 1;
       }

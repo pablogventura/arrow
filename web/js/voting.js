@@ -92,6 +92,20 @@ export function irv(profile, cands = CANDS) {
   return remaining[0];
 }
 
+/** Copeland: wins minus losses in pairwise majority contests. */
+export function copeland(profile, cands = CANDS) {
+  const scores = Object.fromEntries(cands.map((c) => [c, 0]));
+  for (const x of cands) {
+    for (const y of cands) {
+      if (x === y) continue;
+      const m = pairwiseMargin(profile, x, y);
+      if (m > 0) scores[x] += 1;
+      else if (m < 0) scores[x] -= 1;
+    }
+  }
+  return argmax(scores, cands);
+}
+
 /** Approval: approve top `k` candidates (default ceil(m/2)). */
 export function approval(profile, cands = CANDS, k = null) {
   const thresh = k ?? Math.ceil(cands.length / 2);
@@ -132,6 +146,7 @@ export const METHODS = {
   plurality,
   borda,
   minimax,
+  copeland,
   irv,
   approval,
   score: scoreFromRanking,
@@ -141,9 +156,20 @@ export const METHOD_LABELS = {
   plurality: "Pluralidad",
   borda: "Borda",
   minimax: "Minimax",
+  copeland: "Copeland",
   irv: "IRV",
   approval: "Approval",
   score: "Score (via ranking)",
+};
+
+export const METHOD_BLURBS = {
+  plurality: "Solo mira el primer puesto. Un tercero puede 'robar' votos y cambiar el ganador entre los otros dos.",
+  borda: "Suma puntos por puesto. Usa todo el ranking; viola IIA con facilidad.",
+  minimax: "Elige a quien pierde menos feo mano a mano. Suele respetar Condorcet cuando existe.",
+  copeland: "Suma victorias pairwise menos derrotas. Amigable con Condorcet.",
+  irv: "Elimina al último de a uno. Puede fallar monotonía e IIA.",
+  approval: "Aprobar un subconjunto: sale del marco ranking-SWF de Arrow.",
+  score: "Puntajes numéricos (acá inducidos del ranking). Escape típico del teorema.",
 };
 
 function argmax(scores, cands) {

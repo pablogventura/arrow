@@ -192,6 +192,35 @@ canvas {
   margin-top: 0.75rem;
 }
 
+.tip {
+  border-bottom: 1px dotted var(--accent);
+  cursor: help;
+}
+
+.explain {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  background: #f7f1e6;
+  border-left: 3px solid var(--accent-2);
+  font-size: 0.95rem;
+}
+
+.explain h3 {
+  font-family: var(--font-display);
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+.explain ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.utils-panel {
+  margin: 0.75rem 0 1rem;
+  overflow-x: auto;
+}
+
 .site-footer {
   max-width: 1100px;
   margin: 0 auto;

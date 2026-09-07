@@ -4,12 +4,16 @@ import {
   monteCarlo,
   mulberry32,
   METHOD_LABELS,
+  METHOD_BLURBS,
   impartialCulture,
   spatial1D,
+  randomUtilities,
+  explainCanonical,
 } from "./sim.js";
 import { CANDS, allRankings } from "./voting.js";
 
 const RANK_OPTIONS = allRankings(CANDS);
+let lastUtilities = null;
 
 function el(id) {
   return document.getElementById(id);
@@ -20,7 +24,8 @@ function renderResults(results) {
   const rows = Object.entries(METHOD_LABELS)
     .map(([k, label]) => {
       const w = results[k];
-      return `<tr><th>${label}</th><td>${w ?? "-"}</td></tr>`;
+      const tip = METHOD_BLURBS[k] || "";
+      return `<tr><th><span class="tip" title="${tip}">${label}</span></th><td>${w ?? "-"}</td></tr>`;
     })
     .join("");
   const extra = [
@@ -28,7 +33,7 @@ function renderResults(results) {
       ? `<tr><th>Ganador de Condorcet</th><td>${results.condorcet}</td></tr>`
       : `<tr><th>Ganador de Condorcet</th><td>no hay (ciclo)</td></tr>`,
     results.utilitarian != null
-      ? `<tr><th>Max. utilitario (espacial)</th><td>${results.utilitarian}</td></tr>`
+      ? `<tr><th>Max. utilitario</th><td>${results.utilitarian}</td></tr>`
       : "",
     results.scoreUtil != null
       ? `<tr><th>Score (utilidades)</th><td>${results.scoreUtil}</td></tr>`
@@ -38,6 +43,25 @@ function renderResults(results) {
       : "",
   ].join("");
   box.innerHTML = `<table class="results-table"><tbody>${rows}${extra}</tbody></table>`;
+}
+
+function renderExplain(results, isCanonical) {
+  const box = el("canonicalExplain");
+  if (!isCanonical) {
+    box.innerHTML = Object.entries(METHOD_BLURBS)
+      .map(
+        ([k, t]) =>
+          `<p><strong>${METHOD_LABELS[k]}</strong> (${results[k]}): ${t}</p>`
+      )
+      .join("");
+    return;
+  }
+  box.innerHTML =
+    `<h3>Por qué discrepan</h3><ul>` +
+    explainCanonical(results)
+      .map((line) => `<li>${line}</li>`)
+      .join("") +
+    `</ul>`;
 }
 
 function profileFromSelects() {
@@ -51,6 +75,8 @@ function profileFromSelects() {
 }
 
 function buildManualEditors() {
+  lastUtilities = null;
+  el("utilsPanel").hidden = true;
   const n = Number(el("nVotersManual").value);
   const wrap = el("manualEditors");
   wrap.innerHTML = "";
@@ -66,32 +92,40 @@ function buildManualEditors() {
       opt.textContent = r.join(" > ");
       sel.appendChild(opt);
     });
-    // default: cycle through a few rankings
     sel.value = String(i % RANK_OPTIONS.length);
     label.appendChild(sel);
     wrap.appendChild(label);
   }
 }
 
-function loadCanonical() {
-  el("nVotersManual").value = String(CANONICAL_PROFILE.length);
+function applyProfileToEditors(profile) {
   buildManualEditors();
-  CANONICAL_PROFILE.forEach((r, i) => {
+  profile.forEach((r, i) => {
     const idx = RANK_OPTIONS.findIndex(
       (o) => o[0] === r[0] && o[1] === r[1] && o[2] === r[2]
     );
-    el(`rank-${i}`).value = String(idx);
+    if (el(`rank-${i}`)) el(`rank-${i}`).value = String(idx);
   });
+}
+
+function loadCanonical() {
+  el("nVotersManual").value = String(CANONICAL_PROFILE.length);
+  applyProfileToEditors(CANONICAL_PROFILE);
   const results = runElection(CANONICAL_PROFILE);
   renderResults(results);
+  renderExplain(results, true);
   el("scenarioNote").textContent =
-    "Escenario canónico: ciclo de Condorcet A>B>C>A (mismo perfil que en Lean Canonical).";
+    "Escenario canónico: ciclo de Condorcet (mismo perfil que verifica Lean).";
 }
 
 function runManual() {
   const profile = profileFromSelects();
-  renderResults(runElection(profile));
-  el("scenarioNote").textContent = `Perfil manual con ${profile.length} votantes.`;
+  const results = runElection(profile, lastUtilities);
+  renderResults(results);
+  renderExplain(results, false);
+  el("scenarioNote").textContent = lastUtilities
+    ? `Perfil con utilidades latentes (${profile.length} votantes).`
+    : `Perfil manual con ${profile.length} votantes.`;
 }
 
 function drawBars(canvas, summary, key, labelFmt) {
@@ -102,16 +136,16 @@ function drawBars(canvas, summary, key, labelFmt) {
   const methods = Object.keys(METHOD_LABELS);
   const vals = methods.map((m) => summary[m][key]);
   const maxV = Math.max(0.0001, ...vals.map((v) => (v == null ? 0 : Math.abs(v))));
-  const barW = w / (methods.length * 1.4);
+  const barW = w / (methods.length * 1.5);
   methods.forEach((m, i) => {
     const v = summary[m][key];
-    const x = (i + 0.2) * (w / methods.length);
+    const x = (i + 0.15) * (w / methods.length);
     const vh = v == null ? 0 : (Math.abs(v) / maxV) * (h - 40);
     ctx.fillStyle = "#1c4b56";
     ctx.fillRect(x, h - 24 - vh, barW, vh);
     ctx.fillStyle = "#1a1a1a";
-    ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
-    ctx.fillText(METHOD_LABELS[m].slice(0, 8), x, h - 8);
+    ctx.font = "10px ui-sans-serif, system-ui, sans-serif";
+    ctx.fillText(METHOD_LABELS[m].slice(0, 7), x, h - 8);
     ctx.fillText(v == null ? "n/a" : labelFmt(v), x, h - 28 - vh);
   });
 }
@@ -131,7 +165,7 @@ function runMonte() {
       .map((m) => {
         const s = summary[m];
         return `<tr>
-          <td>${METHOD_LABELS[m]}</td>
+          <td><span class="tip" title="${METHOD_BLURBS[m]}">${METHOD_LABELS[m]}</span></td>
           <td>${s.condorcetEfficiency == null ? "n/a" : (100 * s.condorcetEfficiency).toFixed(1) + "%"}</td>
           <td>${s.meanRegret == null ? "n/a" : s.meanRegret.toFixed(3)}</td>
           <td>${(100 * s.iiaChangeRate).toFixed(1)}%</td>
@@ -169,6 +203,21 @@ function exportCsv() {
   a.click();
 }
 
+function showUtilities(utilities) {
+  const panel = el("utilsPanel");
+  panel.hidden = false;
+  panel.innerHTML =
+    `<p class="lede">Utilidades en [0,1] (escape de Arrow: approval y score usan números, no solo el orden).</p>` +
+    `<table class="results-table"><thead><tr><th>Votante</th>${CANDS.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody>` +
+    utilities
+      .map(
+        (u, i) =>
+          `<tr><td>${i + 1}</td>${CANDS.map((c) => `<td>${u[c].toFixed(2)}</td>`).join("")}</tr>`
+      )
+      .join("") +
+    `</tbody></table>`;
+}
+
 function wire() {
   el("nVotersManual").addEventListener("change", buildManualEditors);
   el("btnCanonical").addEventListener("click", loadCanonical);
@@ -178,26 +227,35 @@ function wire() {
   el("btnRandomIc").addEventListener("click", () => {
     const n = Number(el("nVotersManual").value);
     const profile = impartialCulture(n);
-    buildManualEditors();
-    profile.forEach((r, i) => {
-      const idx = RANK_OPTIONS.findIndex(
-        (o) => o[0] === r[0] && o[1] === r[1] && o[2] === r[2]
-      );
-      el(`rank-${i}`).value = String(idx);
-    });
-    renderResults(runElection(profile));
+    lastUtilities = null;
+    applyProfileToEditors(profile);
+    const results = runElection(profile);
+    renderResults(results);
+    renderExplain(results, false);
+    el("scenarioNote").textContent = "Perfil impartial culture.";
   });
   el("btnRandomSpatial").addEventListener("click", () => {
     const n = Number(el("nVotersManual").value);
     const { profile, utilities } = spatial1D(n);
-    buildManualEditors();
-    profile.forEach((r, i) => {
-      const idx = RANK_OPTIONS.findIndex(
-        (o) => o[0] === r[0] && o[1] === r[1] && o[2] === r[2]
-      );
-      el(`rank-${i}`).value = String(idx);
-    });
-    renderResults(runElection(profile, utilities));
+    lastUtilities = utilities;
+    applyProfileToEditors(profile);
+    showUtilities(utilities);
+    const results = runElection(profile, utilities);
+    renderResults(results);
+    renderExplain(results, false);
+    el("scenarioNote").textContent = "Perfil espacial 1D con utilidades latentes.";
+  });
+  el("btnUtils").addEventListener("click", () => {
+    const n = Number(el("nVotersManual").value);
+    const { profile, utilities } = randomUtilities(n);
+    lastUtilities = utilities;
+    applyProfileToEditors(profile);
+    showUtilities(utilities);
+    const results = runElection(profile, utilities);
+    renderResults(results);
+    renderExplain(results, false);
+    el("scenarioNote").textContent =
+      "Escape: mismas personas, pero approval/score leen utilidades (no solo el orden).";
   });
   buildManualEditors();
   loadCanonical();

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Arrow - simulaciones de agregación</title>
+    <title>Arrow - el spoiler no es un bug raro</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -16,13 +16,13 @@
     <header class="site-header">
       <p class="brand">Arrow</p>
       <p class="tagline">
-        Simulaciones para ver qué hace cada método de elección cuando no existe
-        una regla perfecta de rankings (teorema de imposibilidad de Arrow).
+        El spoiler electoral no es un fallo aislado: es el precio de pedirle
+        demasiadas virtudes a un mismo sistema de rankings. Probalo.
       </p>
       <nav class="nav">
-        <a href="articulo.html">Artículo</a>
+        <a href="#manual">Probar el ciclo</a>
+        <a href="articulo.html">Leer la nota</a>
         <a href="articulo.pdf">PDF</a>
-        <a href="#manual">Escenario</a>
         <a href="#monte">Monte Carlo</a>
       </nav>
     </header>
@@ -31,8 +31,8 @@
       <section class="panel" id="manual">
         <h2>Escenario manual</h2>
         <p class="lede">
-          Editá rankings de pocos votantes o cargá el escenario canónico (ciclo
-          de Condorcet, el mismo que verifica Lean).
+          Cargá el ciclo canónico (cinco votantes, tres candidatos) o editá
+          rankings. Abajo: por qué cada método responde distinto.
         </p>
         <div class="controls">
           <label class="field"
@@ -42,19 +42,24 @@
           <button type="button" id="btnCanonical">Canónico</button>
           <button type="button" class="secondary" id="btnRandomIc">Azar IC</button>
           <button type="button" class="secondary" id="btnRandomSpatial">Azar espacial</button>
+          <button type="button" class="secondary" id="btnUtils">Utilidades (escape)</button>
           <button type="button" id="btnManual">Calcular</button>
         </div>
         <div id="manualEditors"></div>
+        <div id="utilsPanel" class="utils-panel" hidden></div>
         <div id="results"></div>
+        <div id="canonicalExplain" class="explain"></div>
         <p class="note" id="scenarioNote"></p>
       </section>
 
       <section class="panel" id="monte">
         <h2>Monte Carlo</h2>
         <p class="lede">
-          Miles de perfiles al azar: eficiencia de Condorcet, regret utilitario
-          (modelo espacial), sensibilidad tipo IIA y coincidencia mayoritaria.
-          Los números son proxies, no "la voluntad verdadera".
+          Proxies honestos de "que tan bien refleja al grupo"
+          <span class="tip" title="Cuando existe alguien que gana todos los mano a mano, cuántas veces lo elige el método.">eficiencia Condorcet</span>,
+          <span class="tip" title="En el modelo espacial, cuánto se pierde frente a maximizar la suma de utilidades.">regret</span>,
+          <span class="tip" title="Qué tan seguido cambia el ganador al meter un candidato spoiler.">estrés tipo IIA</span>.
+          No hay voluntad objetiva única: son mediciones, no veredictos.
         </p>
         <div class="controls">
           <label class="field"
@@ -100,9 +105,9 @@
 
     <footer class="site-footer">
       <p>
-        Métodos: pluralidad, Borda, minimax, IRV, approval y score. Approval y
-        score salen del marco estricto ranking-SWF del teorema de Arrow; por eso
-        el artículo los trata como escapes, no como contraejemplos.
+        Nota + simulaciones sobre el teorema de Arrow. Código:
+        <a href="https://github.com/pablogventura/arrow">github.com/pablogventura/arrow</a>.
+        Pablo Ventura (FaMAF).
       </p>
     </footer>
 

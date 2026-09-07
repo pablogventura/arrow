@@ -25,7 +25,7 @@ cd lean
 lake build
 ```
 
-Sin Mathlib. `Arrow.General.no_arrow_conditions` es un axioma documentado (estrategia Yu 2012); el resto del library se verifica.
+Sin Mathlib. Contagión pairwise para dos votantes chequeada; el paso a dictador / caso general es residual documentado (Yu 2012). Ver `docs/pitch-gato.md` para el mail a El Gato y la Caja.
 
 ## Simulaciones locales
 
