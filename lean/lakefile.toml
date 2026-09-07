@@ -1,0 +1,6 @@
+name = "arrow"
+version = "0.1.0"
+defaultTargets = ["Arrow"]
+
+[[lean_lib]]
+name = "Arrow"

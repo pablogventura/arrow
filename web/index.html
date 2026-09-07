@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Arrow - simulaciones de agregación</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Source+Sans+3:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <p class="brand">Arrow</p>
+      <p class="tagline">
+        Simulaciones para ver qué hace cada método de elección cuando no existe
+        una regla perfecta de rankings (teorema de imposibilidad de Arrow).
+      </p>
+      <nav class="nav">
+        <a href="articulo.html">Artículo</a>
+        <a href="articulo.pdf">PDF</a>
+        <a href="#manual">Escenario</a>
+        <a href="#monte">Monte Carlo</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="panel" id="manual">
+        <h2>Escenario manual</h2>
+        <p class="lede">
+          Editá rankings de pocos votantes o cargá el escenario canónico (ciclo
+          de Condorcet, el mismo que verifica Lean).
+        </p>
+        <div class="controls">
+          <label class="field"
+            >Votantes
+            <input id="nVotersManual" type="number" min="2" max="12" value="5" />
+          </label>
+          <button type="button" id="btnCanonical">Canónico</button>
+          <button type="button" class="secondary" id="btnRandomIc">Azar IC</button>
+          <button type="button" class="secondary" id="btnRandomSpatial">Azar espacial</button>
+          <button type="button" id="btnManual">Calcular</button>
+        </div>
+        <div id="manualEditors"></div>
+        <div id="results"></div>
+        <p class="note" id="scenarioNote"></p>
+      </section>
+
+      <section class="panel" id="monte">
+        <h2>Monte Carlo</h2>
+        <p class="lede">
+          Miles de perfiles al azar: eficiencia de Condorcet, regret utilitario
+          (modelo espacial), sensibilidad tipo IIA y coincidencia mayoritaria.
+          Los números son proxies, no "la voluntad verdadera".
+        </p>
+        <div class="controls">
+          <label class="field"
+            >Corridas
+            <input id="nRuns" type="number" min="50" max="2000" value="300" />
+          </label>
+          <label class="field"
+            >Votantes
+            <input id="nVoters" type="number" min="5" max="101" value="25" />
+          </label>
+          <label class="field"
+            >Modelo
+            <select id="model">
+              <option value="spatial">Espacial 1D</option>
+              <option value="ic">Impartial culture</option>
+            </select>
+          </label>
+          <label class="field"
+            >Semilla
+            <input id="seed" type="number" value="7" />
+          </label>
+          <button type="button" id="btnMonte">Simular</button>
+          <button type="button" class="secondary" id="btnCsv">CSV</button>
+        </div>
+        <table id="monteTable"></table>
+        <div class="charts">
+          <figure>
+            <figcaption>Eficiencia Condorcet</figcaption>
+            <canvas id="chartCondorcet" width="320" height="180"></canvas>
+          </figure>
+          <figure>
+            <figcaption>Tasa de cambio tipo IIA</figcaption>
+            <canvas id="chartIia" width="320" height="180"></canvas>
+          </figure>
+          <figure>
+            <figcaption>Regret utilitario medio</figcaption>
+            <canvas id="chartRegret" width="320" height="180"></canvas>
+          </figure>
+        </div>
+        <p class="note" id="monteNote"></p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        Métodos: pluralidad, Borda, minimax, IRV, approval y score. Approval y
+        score salen del marco estricto ranking-SWF del teorema de Arrow; por eso
+        el artículo los trata como escapes, no como contraejemplos.
+      </p>
+    </footer>
+
+    <script type="module" src="js/ui.js"></script>
+  </body>
+</html>
